@@ -14,6 +14,7 @@ Fruit::Fruit(int initialX, int initialY)
 	value = generateRandomNumber(5, 9);
 	this->initialX = initialX;
 	this->initialY = initialY;
+	cout << "";
 }
 void Fruit::setLocation(Board& gameBoard)
 {

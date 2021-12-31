@@ -95,7 +95,6 @@ int get_Game_Mode(char** args, int size)
     }
     return NORMAL_MODE;
 }
-
 bool is_equal_string(const string& base, const string& toCheck)
 {
     if (base.size() == 0 || toCheck.size() == 0)
@@ -120,7 +119,6 @@ bool is_equal_string(const string& base, const string& toCheck)
 
     return true;
 }
-
 int get_string_size(const char* string)
 {
     if (string == nullptr)
@@ -136,7 +134,6 @@ int get_string_size(const char* string)
 
     return count;
 }
-
 string delete_screen_from_fileName(const string& fileName)
 {
     if (fileName.size() == 0)
@@ -148,10 +145,9 @@ string delete_screen_from_fileName(const string& fileName)
     if (!is_key_in_fileName(fileName, "screen"))
         return res;
 
-    res.resize(size - 6);
+    res.resize(size - 7);
     return res;
 }
-
 string convert_char_to_string(char* str)
 {
     if (str == nullptr)
@@ -164,7 +160,6 @@ string convert_char_to_string(char* str)
         res += str[i];
     return res;
 }
-
 string convert_int_to_string(int num)
 {
     string res;
@@ -190,7 +185,6 @@ string convert_int_to_string(int num)
     
     return res;
 }
-
 int getDigitsOfNum(int num)
 {
     int res = 1;

@@ -1,0 +1,2 @@
+29:pacman die
+210:Finished screen
