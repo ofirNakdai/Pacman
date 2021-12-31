@@ -43,8 +43,7 @@ void Game::startGame()
 		int fruit_save_mode_direction = 0;// 0 means no fruit
 		gameStatus = makeTurn(input , ghostDirection, count, fruit_save_mode_direction);
 		
-		/*if (mode == SAVE_MODE)
-			this->write_move_to_file(input, ghostDirection, fruit_save_mode_direction, this->getScore());*/
+	
 		count++;
 		if (gameStatus != IN_PROGRESS)
 		{
@@ -54,9 +53,12 @@ void Game::startGame()
 	if (gameStatus == GAME_WON)
 	{
 		delete[] ghostDirection;
-		cout << "Game Won";
-		system("pause");
+		clearScreen();
+		cout << "Game Won" << endl;
+		if (this->mode == SAVE_MODE)
+					write_event_to_ResFile(this->getScore(), "Finished screen");
 
+		system("pause");
 		if (load_next_screen())
 		{
 			startGame();
@@ -72,7 +74,11 @@ void Game::startGame()
 	{
 		delete[] ghostDirection;
 		clearScreen();
-		cout << "Game Lost";
+		cout << "Game Lost" << endl;
+
+		if (this->mode == SAVE_MODE)
+			write_event_to_ResFile(this->getScore(), "Finished screen");
+
 		system("pause");
 		setScore(0);
 		setLives(3);
@@ -105,6 +111,8 @@ bool Game::load_next_screen()
 int Game::makeTurn(char direction, int* ghostDirection, int turn, int& fruit_direcion)
 {
 	bool saveMode = (this->mode == SAVE_MODE);
+	if (saveMode)
+		write_pacman_to_file(direction);// pacman die
 
 	int newX, newY;
 	int moveResult, option;
@@ -114,8 +122,7 @@ int Game::makeTurn(char direction, int* ghostDirection, int turn, int& fruit_dir
 		newY = pacman.getY();
 		getNewCoord(direction, &newX, &newY);
 		moveResult = pacman.makeMovePacman(newX, newY, board);
-		if (saveMode)
-			write_pacman_to_file(direction);
+		
 
 		if (moveResult == 2)
 		{//eat fruit
@@ -158,8 +165,9 @@ int Game::makeTurn(char direction, int* ghostDirection, int turn, int& fruit_dir
 			pacman.setY(pacman.getInitialY());
 			board.getCellPtr(pacman.getX(), pacman.getY())->setObject(&pacman);
 			board.getCellPtr(pacman.getX(), pacman.getY())->printCell();
+			
 			if (saveMode)
-				write_pacman_to_file('m');// pacman die
+				write_event_to_ResFile(this->getScore(),"pacman die");// pacman die
 
 			if (fruit != nullptr)
 			{
@@ -178,7 +186,67 @@ int Game::makeTurn(char direction, int* ghostDirection, int turn, int& fruit_dir
 		}
 	}
 
-	vector <int> ghostToSaveFile;
+	if (turn % 20 == 0)
+	{// fruit
+		if (fruit == nullptr)
+		{
+			fruit = new Fruit;
+			fruit->setLocation(board);
+			board.getCellPtr(fruit->getX(), fruit->getY())->setObject(fruit);
+			board.getCellPtr(fruit->getX(), fruit->getY())->printCell();
+		}
+	}
+	if (fruit != nullptr)
+	{
+		if (turn % 40 == 0)
+		{
+			board.getCellPtr(fruit->getX(), fruit->getY())->setObject(nullptr);
+			board.getCellPtr(fruit->getX(), fruit->getY())->printCell();
+			delete fruit;
+			fruit = nullptr;
+
+			if (saveMode)
+				write_fruit_to_file(0, 99, 99);//fruit dissapear
+		}
+		else
+		{
+			if (turn % 4 == 0)
+			{
+				moveResult = fruit->makeTurnFruit(board, fruit_direcion);
+
+				if (saveMode)
+					write_fruit_to_file(fruit_direcion, fruit->getInitialX(), fruit->getInitialY());
+
+				if (moveResult == 1)
+				{
+					board.getCellPtr(fruit->getX(), fruit->getY())->setObject(fruit);
+					fruit->print();
+				}
+				else if (moveResult == 2)
+				{
+					statusMap["Score"] = statusMap["Score"] + fruit->getValue();
+					printData();
+					delete fruit;
+					fruit = nullptr;
+				}
+				else if (moveResult == 3)
+				{
+					delete fruit;
+					fruit = nullptr;
+				}
+			}
+			else
+			{//fruit stay
+				if (saveMode)
+					write_fruit_to_file(0, fruit->getInitialX(), fruit->getInitialY());//fruit created
+			}
+		}
+	}
+	else
+	{// fruit doesnt exsist
+		if (saveMode)
+			write_fruit_to_file(-1, 99, 99);//fruit dissapear
+	}
 
 	if (turn % 2 == 0)
 	{// ghosts
@@ -214,12 +282,10 @@ int Game::makeTurn(char direction, int* ghostDirection, int turn, int& fruit_dir
 			else if (getDifficulty() == 2)
 			{
 				if (turn % 20 >= 0 && turn % 20 <= 5)
-				{
+				{//turn 0-5
 					if (turn % 20 == 0)
-					{
+					{//turn 0
 						ghostDirection[i] = generateRandomNumber(1, 4);
-						if (saveMode)
-							write_ghost_to_file(ghostDirection[i], i + 1);
 					}
 					if (ghostDirection[i] == 1)
 					{
@@ -241,9 +307,13 @@ int Game::makeTurn(char direction, int* ghostDirection, int turn, int& fruit_dir
 						newY = newY + 1;
 						moveResult = ghostArr[i].makeMoveGhost(newX, newY, board);
 					}
+
+					if (saveMode)
+						write_ghost_to_file(ghostDirection[i], i + 1);
+
 				}
 				else
-				{
+				{//smart
 					option = ghostArr[i].generateCell(pacman.getX(), pacman.getY(), board);
 					if (option == 1)
 					{
@@ -261,18 +331,18 @@ int Game::makeTurn(char direction, int* ghostDirection, int turn, int& fruit_dir
 					{
 						newY = ghostArr[i].getY() + 1;
 					}
+
 					if (saveMode)
 						write_ghost_to_file(option, i + 1);
+
 					moveResult = ghostArr[i].makeMoveGhost(newX, newY, board);
 				}
 			}
 			else
-			{
+			{// difficulty 1
 				if (turn % 20 == 0 || turn == 2)
-				{
+				{ // turn 0 or turn 2
 					ghostDirection[i] = generateRandomNumber(1, 4);
-					if (saveMode)
-						write_ghost_to_file(ghostDirection[i], i + 1);
 				}
 				if (ghostDirection[i] == 1)
 				{
@@ -294,6 +364,9 @@ int Game::makeTurn(char direction, int* ghostDirection, int turn, int& fruit_dir
 					newY = newY + 1;
 					moveResult = ghostArr[i].makeMoveGhost(newX, newY, board);
 				}
+
+				if (saveMode)
+					write_ghost_to_file(ghostDirection[i], i + 1);
 			}
 			if (moveResult == 0)
 			{
@@ -334,60 +407,19 @@ int Game::makeTurn(char direction, int* ghostDirection, int turn, int& fruit_dir
 			}
 		}
 	}
-	if (turn % 20 == 0)
-	{// fruit
-		if (fruit == nullptr)
+	else
+	{// ghost stay
+		int i;
+		if (saveMode)
 		{
-			fruit = new Fruit;
-			fruit->setLocation(board);
-			board.getCellPtr(fruit->getX(), fruit->getY())->setObject(fruit);
-			board.getCellPtr(fruit->getX(), fruit->getY())->printCell();
-
-			if (saveMode)
-				write_fruit_to_file(fruit->getInitialX(),fruit->getInitialY() );//fruit created
-		}
-	}
-	if (fruit != nullptr)
-	{
-		if (turn % 40 == 0)
-		{
-			board.getCellPtr(fruit->getX(), fruit->getY())->setObject(nullptr);
-			board.getCellPtr(fruit->getX(), fruit->getY())->printCell();
-			delete fruit;
-			fruit = nullptr;
-
-			if (saveMode)
-				write_fruit_to_file(0);//fruit dissapear
-		}
-		else
-		{
-			if (turn % 4 == 0)
+			for (i = 0; i < (int)ghostArr.size(); i++)
 			{
-				moveResult = fruit->makeTurnFruit(board, fruit_direcion);
-
-				if (saveMode)
-					write_fruit_to_file(fruit_direcion);
-
-				if (moveResult == 1)
-				{
-					board.getCellPtr(fruit->getX(), fruit->getY())->setObject(fruit);
-					fruit->print();
-				}
-				else if (moveResult == 2)
-				{
-					statusMap["Score"] = statusMap["Score"] + fruit->getValue();
-					printData();
-					delete fruit;
-					fruit = nullptr;
-				}
-				else if (moveResult == 3)
-				{
-					delete fruit;
-					fruit = nullptr;
-				}
-			}
-		}	
+				write_ghost_to_file(0, i + 1);
+			}		
+		}
 	}
+ 
+	
 	Sleep(250);
 	return 0;
 }
@@ -542,7 +574,6 @@ void Game::load_screen(int screen_num)
 
 		system("cls");
 		cout << "Game Finished!" << endl;
-		//GameWon(); ToDo
 		system("pause");
 	}
 	else
@@ -609,6 +640,8 @@ void Game::menu()
 			throw "Error loading Screen!";
 		}
 		
+		this->setScore(0);
+		this->setLives(3);
 		startGame();
 		break;
 	case '2':
@@ -623,6 +656,8 @@ void Game::menu()
 			cout << error;
 			throw "Error loading Screen!";
 		}
+		this->setScore(0);
+		this->setLives(3);
 		startGame();
 		break;
 	case '8':
@@ -758,6 +793,10 @@ void Game::printControlsMenu()
 }
 void Game::LoadFile(const string File_Name)
 {
+	if (currFileName.size() > 0)
+		currFileName.clear();
+	this->currFileName = delete_screen_from_fileName(File_Name);
+
 	ifstream inFile;
 	inFile.open(File_Name + ".txt");
 
@@ -810,7 +849,9 @@ void Game::LoadFile(const string File_Name)
 	{
 		try
 		{
-			this->open_save_file(File_Name);
+			this->open_appendix_file("steps");
+			this->open_appendix_file("resault");
+
 		}
 		catch (const string error)
 		{
@@ -908,149 +949,114 @@ const string Game::get_curr_screen_file()
 
 
 //Save mode files - ofir update exe3
-void Game::open_save_file(const string& File_Name)
+void Game::open_appendix_file(const string& append)
 {
-	string newName;
+	ofstream File;
 
-	if (saveFile)
-		saveFile.close();
-	try
-	{
-		newName = delete_screen_from_fileName(File_Name);
-		saveFile.open(newName + "save.txt");
-	}
-	catch (const string error)
-	{
-		cout << error;
-	}
-
-	if (!saveFile)
+	string newName = this->currFileName + "." + append + ".txt";
+	File.open(newName);
+	if (!File)
 		throw "Error openning Save File";
 
-	// initiating file
-	saveFile.seekp(0, ios::beg);//set coursor at the begining of the file
-	saveFile << "Screen File Name: " << newName << endl;
-	saveFile << "crumbs          pacman          fruit";
+	File.close();
 
-	this->fileOffsets.clear();
-	this->fileOffsets.push_back(0); // crumbs
-	this->fileOffsets.push_back(16); // pacman
-	this->fileOffsets.push_back(32); // fruit
-
-
-	for (int i = 0; i < ghostArr.size(); i++)
-	{
-		saveFile << "          " << "ghost" << i + 1;
-		if (i == 0)
-			this->fileOffsets.push_back(47); // ghost1
-		else
-		{
-			if (i <= 9)
-				this->fileOffsets.push_back(fileOffsets[fileOffsets.size() - 1] + get_string_size("ghost") + 1 + 10); // ghost2...
-			else // ghost number > 10
-				this->fileOffsets.push_back(fileOffsets[fileOffsets.size() - 1] + get_string_size("ghost") + 2 + 10); // ghost2...
-		}
-	}
-	saveFile << endl;
-
-}
-void Game::write_move_to_file(char pacman_input, int* ghostsDirection, int fruit_direction, int pointOfTime)
-{
-	const int MAX_LINE_SIZE = 81;
-	if (!this->saveFile)
-		throw "Error loading Save File";
-
-	string frame;
-	int count = 0;
-	int ghostCount = 0;
-
-	for (int i = 0; i < MAX_LINE_SIZE; i++)
-	{
-		if (i == fileOffsets[count] && count<fileOffsets.size())
-		{// got to one of the offsets
-
-			if (count == 0)
-			{// crumbs
-				frame += convert_int_to_string(pointOfTime);
-				i += getDigitsOfNum(pointOfTime) - 1;
-				count++;
-			}
-			else if (count == 1)
-			{// pacman
-				frame += pacman_input;
-				count++;
-			}
-			else if (count == 2)
-			{// fruit
-				if (fruit_direction != 0)
-				{
-					frame += convert_int_to_string(fruit_direction);
-					frame += ',';
-					frame += convert_int_to_string(fruit->getInitialX());
-					frame += ',';
-					frame += convert_int_to_string(fruit->getInitialY());
-					i += 3; i += getDigitsOfNum(fruit->getInitialX()); i += getDigitsOfNum(fruit->getInitialX()) - 1;
-				}
-				else
-				{
-					frame += '0';
-				}
-				count++;
-			}
-			else if (count > 2)
-			{// ghosts
-				//frame += convert_int_to_string(ghostsDirection[count-3]);
-				count++;
-			}
-			
-		}
-		else
-		{
-			frame += ' ';
-		}
-	}
-	frame += '\n';
-	(*saveFile) << frame;
 }
 void Game::write_pacman_to_file(char direction)
 {
-	int pacman_offset = this->fileOffsets[1];
+	ofstream saveFile;
+	saveFile.open(this->currFileName + ".steps.txt", ios::app);//writing to end of file
 
-	saveFile << convert_int_to_string(this->getScore());// write point of time to file
-	saveFile.seekp(ios::cur, -getDigitsOfNum(this->getScore()));// set corsur back to beginning of line
 
-	saveFile.seekp(ios::cur, pacman_offset);// set corsur at pacman offset
-	saveFile << direction;
-	saveFile.seekp(ios::cur, -pacman_offset-1);// set corsur back to beginning of line
-
+	//saveFile << convert_int_to_string(this->getScore()) << ',';// write point of time to file
+	saveFile << direction << ',';
+	saveFile.close();
 }
-void Game::write_fruit_to_file(int direction)
+void Game::write_fruit_to_file(int direction, int x, int y)
 {
-	int fruit_offset = this->fileOffsets[2];
+	ofstream saveFile;
+	saveFile.open(this->currFileName + ".steps.txt", ios::app);//writing to end of file
 
-	saveFile.seekp(ios::cur, fruit_offset);// set corsur at fruit offset
-	saveFile << direction;
-	saveFile.seekp(ios::cur, -fruit_offset - 1);// set corsur back to beginning of line
+	if (x < 10)
+	{
+		if (y < 10)
+		{
+			if (direction == 0) // fruit doesnt move
+				saveFile << ' ' << ',' << x << " ," << y << " ,";
+			else if (direction == -1)// fruit doesnt exsist
+				saveFile << 'M' << ',' << x << " ," << y << " ,";
+			else
+				saveFile << direction << ',' << x << " ," << y << " ,";
+		}
+		else
+		{
+			if (direction == 0) // fruit doesnt move
+				saveFile << ' ' << ',' << x << " ," << y << ',';
+			else if (direction == -1)// fruit doesnt exsist
+				saveFile << 'M' << ',' << x << " ," << y << ',';
+			else
+				saveFile << direction << ',' << x << " ," << y << ',';
+		}
+	}
+	else
+	{
+		if (y < 10)
+		{
+			if (direction == 0) // fruit doesnt move
+				saveFile << ' ' << ',' << x << ',' << y << " ,";
+			else if (direction == -1)// fruit doesnt exsist
+				saveFile << 'M' << ',' << x << ',' << y << " ,";
+			else
+				saveFile << direction << ',' << x << ',' << y << " ,";
+		}
+		else
+		{
+			if (direction == 0) // fruit doesnt move
+				saveFile << ' ' << ',' << x << ',' << y << ',';
+			else if (direction == -1)// fruit doesnt exsist
+				saveFile << 'M' << ',' << x << ',' << y << ',';
+			else
+				saveFile << direction << ',' << x << ',' << y << ',';
+		}
+	}
 
-}
-void Game::write_fruit_to_file(int x, int y)// when created
-{
-	int fruit_offset = this->fileOffsets[2];
-
-	saveFile.seekp(ios::cur, fruit_offset);// set corsur at fruit offset
-	saveFile << x << ',' << y;
-	saveFile.seekp(ios::cur, - (getDigitsOfNum(x) + getDigitsOfNum(y) + fruit_offset ));// set corsur back to beginning of line
-
+	
+	saveFile.close();
 }
 void Game::write_ghost_to_file(int direction, int ghostNum)
 {
-	int ghost_offset = this->fileOffsets[2 + ghostNum];
+	ofstream saveFile;
+	saveFile.open(this->currFileName + ".steps.txt", ios::app);
 
-	saveFile.seekp(ios::cur, ghost_offset);// set corsur at ghost offset
-	saveFile << direction;
-	saveFile.seekp(ios::cur, -ghost_offset - 1);// set corsur back to beginning of line
+	if (direction == 0)
+	{// ghost doesnt move
+		if (ghostNum == ghostArr.size())// last ghost
+		{
+			saveFile << ' ';
+			saveFile << endl;
+		}
+		else
+			saveFile << ' ' << ',';
+	}
+	else
+	{
+		if (ghostNum == ghostArr.size())// last ghost
+		{
+			saveFile << direction;
+			saveFile << endl;
+		}
+		else
+			saveFile << direction << ',';
+	}
+	
 
-	if (ghostNum == ghostArr.size())// last ghost
-		saveFile << endl;
+	saveFile.close();
 
+}
+void Game::write_event_to_ResFile(int pointOfTime, const string& event)
+{
+	ofstream ResFile;
+	ResFile.open(this->currFileName + ".resault.txt", ios::app);
+
+	ResFile << pointOfTime << ':' << event << endl;
+	ResFile.close();
 }

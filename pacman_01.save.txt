@@ -1,2 +1,0 @@
-Screen File Name: pacman_01.
-crumbs          pacman          fruit          ghost1          ghost2          ghost3

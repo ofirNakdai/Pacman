@@ -7,13 +7,13 @@ Fruit::Fruit()
 	initialX = -1;
 	initialY = -1;
 }
-
 Fruit::Fruit(int initialX, int initialY)
 	: GameObject('+', initialX, initialY, 4)
 {
 	value = generateRandomNumber(5, 9);
 	this->initialX = initialX;
 	this->initialY = initialY;
+	cout << "";
 }
 void Fruit::setLocation(Board& gameBoard)
 {
@@ -33,7 +33,6 @@ void Fruit::setLocation(Board& gameBoard)
 		}
 	}
 }
-
 int Fruit::makeTurnFruit(Board& gameBoard, int& save_mode_direcion)
 {
 	int direction;

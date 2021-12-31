@@ -43,7 +43,7 @@ private:
 	set<string> m_screenFiles;
 	pair<int, int> m_dataLocation;
 
-	ofstream saveFile;
+	string currFileName;
 	vector<int> fileOffsets;// [0] = pacnam, [1] = fruit, [2...] = ghosts
 
 public:
@@ -93,10 +93,9 @@ public:
 	void checkFileCharecter(char c, int row, int col);
 	
 	//Save mode files - ofir update exe3
-	void write_move_to_file(char pacman_input, int* ghostsDirection, int fruit_direction, int pointOfTime);
-	void open_save_file(const string& File_Name);
+	void open_appendix_file(const string& append);
 	void write_pacman_to_file(char direction);
-	void write_fruit_to_file(int direction);
-	void write_fruit_to_file(int x, int y);// when created
+	void write_fruit_to_file(int direction, int x, int y);
 	void write_ghost_to_file(int direction, int ghostNum);
+	void write_event_to_ResFile(int pointOfTime,const string& event);
 };
