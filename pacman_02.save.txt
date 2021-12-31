@@ -1,0 +1,8 @@
+screen file name: pacman_01
+crumbs          pacman          fruit          ghost1          ghost2          ghost3
+1               s               disapear       d               x               x
+2               d               disapear       d               x               x
+3               d               disapear       d               x               x
+4               d               (10,30)        d               x               x
+5               w               a              d               x               x
+5               die             a              a               w               d
