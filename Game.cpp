@@ -640,6 +640,8 @@ void Game::menu()
 			throw "Error loading Screen!";
 		}
 		
+		this->setScore(0);
+		this->setLives(3);
 		startGame();
 		break;
 	case '2':
@@ -654,6 +656,8 @@ void Game::menu()
 			cout << error;
 			throw "Error loading Screen!";
 		}
+		this->setScore(0);
+		this->setLives(3);
 		startGame();
 		break;
 	case '8':

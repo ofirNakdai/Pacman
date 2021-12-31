@@ -7,7 +7,6 @@ Fruit::Fruit()
 	initialX = -1;
 	initialY = -1;
 }
-
 Fruit::Fruit(int initialX, int initialY)
 	: GameObject('+', initialX, initialY, 4)
 {
@@ -34,7 +33,6 @@ void Fruit::setLocation(Board& gameBoard)
 		}
 	}
 }
-
 int Fruit::makeTurnFruit(Board& gameBoard, int& save_mode_direcion)
 {
 	int direction;
